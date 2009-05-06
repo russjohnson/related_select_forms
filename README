@@ -49,16 +49,16 @@ You can also pass an :include_blank attribute consisting of true, false (default
 <b>Models</b>
 
   class Metro < ActiveRecord::Base
-  ÊÊ has_many :areas
+    has_many :areas
   end
   
   class Area < ActiveRecord::Base
-  ÊÊ belongs_to :metro
-  ÊÊ has_many :neighborhoods
+    belongs_to :metro
+    has_many :neighborhoods
   end
   
   class Neighborhood < ActiveRecord::Base
-  ÊÊ belongs_to :area
+    belongs_to :area
   end
 
   Just looking at the models it should be plain to see how the selects should be related. You must first select a Metro, then that will populate the Areas. Once you select the area, that will populate the Neighborhoods.
