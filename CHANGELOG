@@ -1,0 +1,5 @@
+May 5 2009
+
+  Corey Ehmke (www.idolhands.com): Added full support for include_blank. You can now pass an :include_blank attribute consisting of true, false (default), a string, or a two-element array, just like the standard Rails select form helper. If you do not set this attribute, the related select will default to the first option. Also edited the README and replaced the original examples with the 
+  (much more concise and comprehensible) example from Russ Johnson's post on angry-fly.com.
+  

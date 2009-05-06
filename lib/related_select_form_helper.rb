@@ -16,13 +16,18 @@ module ActionView::Helpers::RelatedSelectFormHelper
   # Return a dependent select tag with options related to the 
   # parent_select_tag selection for the given object and method using 
   # options_from_collection_for_select to generate the list of option tags.
+  #
+  #     related_collection_select(
+  #         object, method, parent_select_tag, collection, 
+  #         value_method, text_method, reference_method, 
+  #         options = {}, html_options = {})
   # 
   # === Arguments:
   # 
   # * 'object', 'method', 'collection', 'value_method', 'text_method', 
   #   'options' & 'html_options' are used exactly the same way as in
   #   the standard collection_select helper method. 
-  # * 'parent_element' specifies, as the name says, the parent 
+  # * 'parent_select_tag' specifies, as the name says, the parent 
   #   select tag; argument can be passed as an array 
   #   [:parent_object, :method] or directly as string referencing the 
   #   tag id (e.g. "parent_object_method")
@@ -33,24 +38,60 @@ module ActionView::Helpers::RelatedSelectFormHelper
   # that will override the default pre-selection behaviour (which uses to call 
   # '@object.method' to determine the to be selected option).
   # 
+  # You can also pass an :include_blank attribute consisting of true, false (default), a string, or a 
+  # two-element array, just like the standard Rails select form helper. If you do not set this attribute, 
+  # the related select will default to the first option.
   # 
-  # === Example usage:
+  # === Example:
   # 
-  # <b>tables</b>
+  # <b>Models</b>
   # 
-  #     car_companies: id, name
-  #     car_models:    id, name, car_company_id  
+  #   class Metro < ActiveRecord::Base
+  #   ÊÊ has_many :areas
+  #   end
+  #   
+  #   class Area < ActiveRecord::Base
+  #   ÊÊ belongs_to :metro
+  #   ÊÊ has_many :neighborhoods
+  #   end
+  #   
+  #   class Neighborhood < ActiveRecord::Base
+  #   ÊÊ belongs_to :area
+  #   end
+  # 
+  #   Just looking at the models it should be plain to see how the selects should be related. You must 
+  #   first select a Metro, then that will populate the Areas. Once you select the area, that will 
+  #   populate the Neighborhoods.
+  # 
+  # <b>View</b>
+  # 
+  #   Normally this would take a lot of handwritten Javascript to accomplish. And I know there are 
+  #   probably some super simple jQuery plugins for this thing, but this application is using the standard 
+  #   Prototype/Scriptaculous combo that ships with Rails.
+  # 
+  #   So here is the how simple the form fields are using the plugin:
+  # 
+  #     <%- form_for(@sales_contact) do |f| -%>
+  # 
+  #       <%= f.label :metro_id, '', :class => 'title' %>
+  #       <%= f.collection_select :metro_id, Metro.find(:all, :order => "name"), :id, :name, 
+  #       :include_blank => 'Select a Metro %>
+  #   
+  #       <%= f.label :area_id, '', :class => 'title' %>
+  #       <%= related_collection_select(:sales_contact, :area_id, [:sales_contact_metro, :id], 
+  #       Area.find(:all,:order => "area" ), :id, :area, :metro_id, :include_blank => 'Select an Area') %>
+  #   
+  #       <%= f.label :neighborhood_id, '', :class => "title" %>
+  #       <%= related_collection_select(:sales_contact, :neighborhood_id, [:sales_contact_area, :id], 
+  #       Neighborhood.find(:all,:order => "title"), :id, :title, :area_id, :include_blank => 'Select a 
+  #       Neighborhood') %>
+  # 
+  #       ...
   #     
-  # <b>view</b>
-  #
-  #     <%= collection_select(
-  #           :car_company, :id, CarCompany.find(:all), :id, :name) %>
-  #     <%= related_collection_select(:car_model, :id, [:car_company, :id], 
-  #           CarModel.find(:all), :id, :name, :car_company_id) %>
-  #           
-  # The code above will create two drop-down select tags. The 1st allows the
-  # selection of a car company. Based on this decision the 2nd select tag shows
-  # company specific car models.
+  #   Notice the first select is a standard collection_select, then for each related field we make calls 
+  #   to the plugin. The method signature is very similar to the standard collection_select with the 
+  #   addition of a couple of parent-related arguments.
+  # 
   def related_collection_select(object, method, parent_element, collection, value_method, text_method, reference_method, options = {}, html_options = {})                  
     relations = collection.inject({}) do |result, record|
       reference_value = record.send(reference_method).to_s
@@ -170,7 +211,17 @@ class ActionView::Helpers::InstanceTag #:nodoc:
     def javascript_code_for_relation_hash(relations, value, options)
       relations.collect do |(reference_value, records)|           
         choices = []
-        choices << "new Option('', '')" if options[:include_blank]
+        case options[:include_blank].class.name
+          when "FalseClass"
+            _blank = nil
+          when "String"
+            _blank = [options[:include_blank], '']
+          when "Array"
+            _blank = options[:include_blank]
+          else
+            _blank = ['','']
+        end
+        choices << "new Option('#{_blank[0]}', '#{_blank[0]}')" unless _blank.nil?
         if value.blank? && options[:prompt]
           choices << "new Option(#{options[:prompt].kind_of?(String) ? options[:prompt] : 'Please select'}, '')"
         end

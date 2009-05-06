@@ -1,21 +1,25 @@
 * Original code Copyright (C) 2007 Dimitrij Denissenko
 * Rails 2.3.2 support added by Russ Johnson (russ@angry-fly.com)
+* Full :include_blank support added by Corey Ehmke (www.idolhands.com)
 * http://angry-fly.com
 * http://www.dvisionfactory.com
-* http://retro.dvisionfactory.com/related-select-forms
+* http://www.idolhands.com
 * git://github.com/russjohnson/related_select_forms.git
 * Please read LICENSE document for more information.
 
-This plugin adds a new helper to the great RubyOnRails framework that allows to
-generate multiple, dependent HTML select tags. It handles the relations with 
-simple JavaScript (requires prototype.js library), so you do not need to code
-any AJAX callbacks (can be handy when you only deal with a small amount of 
-data). This plugin works also well with RJS templates and supports recursive
-pre-selection of the related select tags (look on the examples).
+This plugin adds a new helper to the Ruby on Rails framework that simplifies 
+the creation of multiple, dependent HTML select tags.
+
+It handles the relations with simple JavaScript (requires prototype.js library),
+so you do not need to code any AJAX callbacks-- handy when you only deal with a
+small amount of data.
+
+This plugin works also well with RJS templates and supports recursive
+pre-selection of the related select tags (see the examples).
 
 The usage is trivial. First create a usual select (or collection_select) which
 will act as "parent". Afterwards you can create one or many dependent 
-child(ren) select(s) by calling:
+child select(s) by calling:
 
     related_collection_select(
         object, method, parent_select_tag, collection, 
@@ -38,52 +42,45 @@ Additionally the 'options' argument can include a ':selected' attribute,
 that will override the default pre-selection behaviour (which uses to call 
 '@object.method' to determine the to be selected option).
 
+You can also pass an :include_blank attribute consisting of true, false (default), a string, or a two-element array, just like the standard Rails select form helper. If you do not set this attribute, the related select will default to the first option.
 
-=== Example: Two related select forms 
+=== Example:
 
-<b>tables</b>
+<b>Models</b>
 
-    car_companies: id, name
-    car_models:    id, name, car_company_id
+  class Metro < ActiveRecord::Base
+  ÊÊ has_many :areas
+  end
   
-<b>view</b>
+  class Area < ActiveRecord::Base
+  ÊÊ belongs_to :metro
+  ÊÊ has_many :neighborhoods
+  end
+  
+  class Neighborhood < ActiveRecord::Base
+  ÊÊ belongs_to :area
+  end
 
-    <%= collection_select(:car_company, :id, CarCompany.find(:all), :id, :name) %>
-    <%= related_collection_select(
-          :car_model, :id, [:car_company, :id], 
-            CarModel.find(:all), :id, :name, :car_company_id) %>
+  Just looking at the models it should be plain to see how the selects should be related. You must first select a Metro, then that will populate the Areas. Once you select the area, that will populate the Neighborhoods.
 
-The code above will create two drop-down select tags. The 1st allows the
-selection of a car company. Based on this decision the 2nd select tag shows
-company specific car models.
+<b>View</b>
 
+  Normally this would take a lot of handwritten Javascript to accomplish. And I know there are probably some super simple jQuery plugins for this thing, but this application is using the standard Prototype/Scriptaculous combo that ships with Rails.
 
-=== Example: Three related select forms
+  So here is the how simple the form fields are using the plugin:
 
-The script allows to generate an almost unlimited number of related selects:
+    <%- form_for(@sales_contact) do |f| -%>
 
-<b>tables</b>
+      <%= f.label :metro_id, '', :class => 'title' %>
+      <%= f.collection_select :metro_id, Metro.find(:all, :order => "name"), :id, :name, :include_blank => 'Select a Metro %>
+  
+      <%= f.label :area_id, '', :class => 'title' %>
+      <%= related_collection_select(:sales_contact, :area_id, [:sales_contact_metro, :id], Area.find(:all,:order => "area" ), :id, :area, :metro_id, :include_blank => 'Select an Area') %>
+  
+      <%= f.label :neighborhood_id, '', :class => "title" %>
+      <%= related_collection_select(:sales_contact, :neighborhood_id, [:sales_contact_area, :id], Neighborhood.find(:all,:order => "title"), :id, :title, :area_id, :include_blank => 'Select a Neighborhood') %>
 
-    categories: id, title, parent_id
-    some_objects: id, name, category_id
+      ...
+    
+  Notice the first select is a standard collection_select, then for each related field we make calls to the plugin. The method signature is very similar to the standard collection_select with the addition of a couple of parent-related arguments.
 
-<b>controller</b>
-
-    @first_col = Category.find(:all, :conditions => 'parent_id IS NULL')
-    @second_col = Category.find(:all, :conditions => 'parent_id > 0')
-    @third_col = SomeObject.find(:all)
-    @some_object = SomeObject.find(123)
-
-<b>view</b>
-
-    <%= collection_select(:category, :id, @first_col, :id, :title) %>
-    <%= related_collection_select(:sub_category, :id, [:category, :id], 
-          @second_col, :id, :title, :parent_id) %>
-    <%= related_collection_select(:some_object, :id, [:sub_category, :id], 
-          @third_col, :id, :name, :category_id, {}, {:size => 6}) %>
-
-This example creates three related select tags. The 1st shows 'categories', 
-the 2nd 'sub-categories' and the 3rd 'some_objects'. Because an '@some_object'
-instence variable is defined, item with id='123' will be pre-selected 
-automatically in the 3rd select tag. The 1st & 2nd select forms will also be
-recursively adapted automatically.
