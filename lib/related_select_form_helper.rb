@@ -223,7 +223,7 @@ class ActionView::Helpers::InstanceTag #:nodoc:
         end
         choices << "new Option('#{_blank[0]}', '#{_blank[0]}')" unless _blank.nil?
         if value.blank? && options[:prompt]
-          choices << "new Option(#{options[:prompt].kind_of?(String) ? options[:prompt] : 'Please select'}, '')"
+          choices << "new Option('#{options[:prompt].kind_of?(String) ? options[:prompt] : 'Please select'}', '')"
         end
 
         choices += records.collect do |(value, text)| 
